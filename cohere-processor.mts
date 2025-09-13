@@ -222,7 +222,7 @@ export const assessReceiptJson = async (system_prompt: string, user_prompt: stri
 }
 
 
-export const ReceiptScanner = async () => {
+export const ReceiptScanner = async (imageUri) => {
 
   let visionResponse = await callVisionModel(VISION_SYS_PROMPT, VISION_USER_PROMPT, imageUri, JSONSCHEMA);
   if (visionResponse) {
@@ -251,6 +251,6 @@ export const ReceiptScanner = async () => {
 
 
   
-const response = await ReceiptScanner()
+const response = await ReceiptScanner(imageUri)
 
 
