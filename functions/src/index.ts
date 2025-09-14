@@ -8,21 +8,33 @@
  */
 
 import { setGlobalOptions } from "firebase-functions";
-import { onCall } from "firebase-functions/https";
+import { onRequest } from "firebase-functions/https";
+import { scanReceipt } from "./lib/cohere-processor.js";
+import { defineSecret } from "firebase-functions/params";
 
 setGlobalOptions({ maxInstances: 10 });
 
-export const handleReceipt = onCall(async (request) => {
-  // try {
-  //   const { base64String, mimeType } = req.body;
-  //   const imageUri = `data:${mimeType};base64,${base64String}`;
-  //   const receiptJson: string = await scanReceipt(imageUri);
-  //   console.log(receiptJson);
-  //   const parsedData = JSON.parse(receiptJson);
-  //   res.send(parsedData);
-  // } catch (err) {
-  //   console.error("Error processing image:", err);
-  //   res.status(500).json({ error: "Failed to process image" });
-  //   return;
-  // }
-});
+// export const handleReceipt = onCall(async (request) => {
+
+// });
+
+const cohereApiKey = defineSecret("COHERE_API_KEY");
+
+export const getReceiptData = onRequest(
+  {secrets: [cohereApiKey]},
+  async (req, res) => {
+  // logger.info("Hello logs!", { structuredData: true });
+  // response.send("Hello from Firebase!");
+    try {
+      const { base64String, mimeType } = req.body;
+      const imageUri = `data:${mimeType};base64,${base64String}`;
+      const receiptJson: string = await scanReceipt(imageUri, cohereApiKey.value());
+      console.log(receiptJson);
+      const parsedData = JSON.parse(receiptJson);
+      res.send(parsedData);
+    } catch (err) {
+      console.error("Error processing image:", err); 
+      res.status(500).json({ error: "Failed to process image"});
+      return;
+    }
+  });

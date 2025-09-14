@@ -9,7 +9,7 @@ import {
   REASONING_USER_PROMPT,
   VISION_SYS_PROMPT,
   VISION_USER_PROMPT,
-} from "./constants";
+} from "./constants.js";
 
 // interface ResponseFormat {
 //   type: "json_object";
@@ -34,10 +34,11 @@ async function callVisionModel(
   system_prompt: string,
   user_prompt: string,
   imageUri: string,
-  jsonSchema: ResponseFormatV2
+  jsonSchema: ResponseFormatV2,
+  cohereApiKey: string
 ) {
   try {
-    const cohere = new CohereClientV2({ token: process.env.CO_API_KEY });
+    const cohere = new CohereClientV2({ token: process.env.CO_API_KEY ?? cohereApiKey });
     const response = await cohere.chat({
       model: "command-a-vision-07-2025",
       messages: [
@@ -70,10 +71,12 @@ async function callVisionModel(
   } catch (err) {
     if (err instanceof CohereTimeoutError) {
       console.log("Request timed out", err);
-    } else if (err instanceof CohereError) {
+    }  else if (err instanceof CohereError){
       console.log(err.statusCode);
       console.log(err.message);
       console.log(err.body);
+    } else {
+      console.error("An unknown error occurred:", err);
     }
   }
   return undefined;
@@ -83,10 +86,11 @@ async function assessReceiptJson(
   system_prompt: string,
   user_prompt: string,
   jsonString: string,
-  jsonSchema: ResponseFormatV2
+  jsonSchema: ResponseFormatV2,
+  cohereApiKey: string
 ) {
   try {
-    const cohere = new CohereClientV2({ token: process.env.CO_API_KEY });
+    const cohere = new CohereClientV2({ token: process.env.CO_API_KEY ?? cohereApiKey });
     const response = await cohere.chat({
       model: "command-a-reasoning-08-2025",
 
@@ -105,7 +109,7 @@ async function assessReceiptJson(
           ],
         },
       ],
-      maxTokens: 2000,
+      maxTokens: 3000,
       responseFormat: jsonSchema,
     });
 
@@ -118,18 +122,22 @@ async function assessReceiptJson(
       console.log(err.statusCode);
       console.log(err.message);
       console.log(err.body);
+    } else{
+      console.error("An unknown error occurred:", err);
     }
     return;
   }
 }
 
-export async function scanReceipt(imageUri: string) {
+export async function scanReceipt(imageUri: string, cohereApiKey: string) {
   const visionResponse = await callVisionModel(
     VISION_SYS_PROMPT,
     VISION_USER_PROMPT,
     imageUri,
-    JSONSCHEMA
+    JSONSCHEMA,
+    cohereApiKey
   );
+  console.log("Vision Response:", visionResponse);
   const visionOutput: string = (
     visionResponse?.message
       ?.content?.[0] as AssistantMessageResponseContentItem.Text
@@ -140,7 +148,8 @@ export async function scanReceipt(imageUri: string) {
     REASONING_SYS_PROMPT,
     REASONING_USER_PROMPT,
     visionOutput,
-    JSONSCHEMA
+    JSONSCHEMA,
+    cohereApiKey
   );
 
   console.log("Reasoning Response:", reasoningResponse);
